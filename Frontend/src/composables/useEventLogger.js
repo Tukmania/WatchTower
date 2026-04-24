@@ -1,45 +1,38 @@
-import { ref } from 'vue'
+import { ref }            from 'vue'
 import { logEvent, undoLastEvent, fetchRecentEvents } from '../api/events.js'
-import { useEventStore } from '../stores/eventStore.js'
+import { useEventStore }  from '../stores/eventStore.js'
 import { useCountsStore } from '../stores/countsStore.js'
 
 export function useEventLogger() {
-
   const isLoading  = ref(false)
   const error      = ref(null)
-  const lastLogged = ref(null)  // holds the last successfully logged event
+  const lastLogged = ref(null)
 
-  // ── Core logging function ─────────────────────────────────────────────────
-  // This is what every TallyButton calls
   async function log(eventType, subtype, location, locationCategory) {
     isLoading.value = true
     error.value     = null
 
     try {
-      const response = await logEvent({
+      const response   = await logEvent({
         event_type:        eventType,
         subtype:           subtype,
         location:          location,
         location_category: locationCategory
       })
 
-      const savedEvent = response.data
+      const savedEvent    = response.data
+      lastLogged.value    = savedEvent
 
-      // Store the last logged event so TallyButton can show flash feedback
-      lastLogged.value = savedEvent
-
-      // Push to event store immediately — no waiting for a poll
-      const eventStore = useEventStore()
-      eventStore.prependEvent(savedEvent)
-
-      // Refresh live counts immediately after every log
+      const eventStore  = useEventStore()
       const countsStore = useCountsStore()
+
+      eventStore.prependEvent(savedEvent)
       await countsStore.refreshCounts()
 
       return { success: true, event: savedEvent }
 
     } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to log event. Try again.'
+      error.value = err.response?.data?.message || 'Failed to log event.'
       console.error('useEventLogger error:', err)
       return { success: false, error: error.value }
 
@@ -48,7 +41,6 @@ export function useEventLogger() {
     }
   }
 
-  // ── Undo last event ───────────────────────────────────────────────────────
   async function undo() {
     isLoading.value = true
     error.value     = null
@@ -56,34 +48,45 @@ export function useEventLogger() {
     try {
       const response = await undoLastEvent()
       const result   = response.data
+      const eventStore  = useEventStore()
+      const countsStore = useCountsStore()
 
       if (result.success) {
-        // Remove from event store
-        const eventStore = useEventStore()
         eventStore.removeLastEvent()
-
-        // Refresh counts after undo
-        const countsStore = useCountsStore()
         await countsStore.refreshCounts()
-
         lastLogged.value = null
 
+        // Trigger the global UndoToast
+        eventStore.setUndoResult({
+          success: true,
+          message: `${result.undone?.event_type || 'Event'} at 
+                    ${result.undone?.location || ''} undone`
+        })
+
         return { success: true, undone: result.undone }
+
       } else {
+        eventStore.setUndoResult({
+          success: false,
+          message: result.message || 'Nothing to undo'
+        })
         return { success: false, message: result.message }
       }
 
     } catch (err) {
-      error.value = err.response?.data?.message || 'Undo failed. Try again.'
-      console.error('useEventLogger undo error:', err)
-      return { success: false, error: error.value }
+      const eventStore = useEventStore()
+      eventStore.setUndoResult({
+        success: false,
+        message: 'Undo failed. Please try again.'
+      })
+      console.error('Undo error:', err)
+      return { success: false }
 
     } finally {
       isLoading.value = false
     }
   }
 
-  // ── Refresh recent events ─────────────────────────────────────────────────
   async function refreshEvents() {
     try {
       const response   = await fetchRecentEvents()
@@ -95,12 +98,9 @@ export function useEventLogger() {
   }
 
   return {
-    // State
     isLoading,
     error,
     lastLogged,
-
-    // Actions
     log,
     undo,
     refreshEvents

@@ -1,34 +1,59 @@
 <template>
-  <div class="p-8">
-    <h1 class="text-2xl font-bold text-gray-800">
-      CCTV Monitoring Dashboard
-    </h1>
+  <AppShell>
+    <div class="dashboard">
 
-    <div class="mt-6 p-4 rounded-lg border" :class="statusClass">
-      <p class="font-semibold">Backend Status: {{ status }}</p>
-      <p class="text-sm mt-1 text-gray-600">{{ message }}</p>
+      <!-- Main content area -->
+      <div class="dashboard__main">
+        <TerminalPanel />
+        <ShopsPanel />
+        <RecentEventsFeed />
+      </div>
+
+      <!-- Right summary panel -->
+      <LiveSummaryPanel />
+
     </div>
-  </div>
+  </AppShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '../api/index.js'
+import { onMounted, onUnmounted } from 'vue'
+import { useCountsStore }         from '../stores/countsStore.js'
+import { useEventStore }          from '../stores/eventStore.js'
+import AppShell                   from '../components/layout/AppShell.vue'
+import TerminalPanel              from '../components/terminals/TerminalPanel.vue'
+import ShopsPanel                 from '../components/shops/ShopsPanel.vue'
+import LiveSummaryPanel           from '../components/dashboard/LiveSummaryPanel.vue'
+import RecentEventsFeed           from '../components/events/RecentEventsFeed.vue'
 
-const status  = ref('Checking...')
-const message = ref('')
-const statusClass = ref('bg-yellow-50 border-yellow-300')
+const countsStore = useCountsStore()
+const eventStore  = useEventStore()
 
 onMounted(async () => {
-  try {
-    const response = await api.get('/')
-    status.value     = '✅ Connected'
-    message.value    = response.data.message
-    statusClass.value = 'bg-green-50 border-green-300'
-  } catch (error) {
-    status.value     = '❌ Cannot reach backend'
-    message.value    = 'Make sure Flask is running on port 5000'
-    statusClass.value = 'bg-red-50 border-red-300'
-  }
+  await eventStore.fetchRecent()
+  countsStore.startPolling()
+})
+
+onUnmounted(() => {
+  countsStore.stopPolling()
 })
 </script>
+
+<style scoped>
+.dashboard {
+  display:   flex;
+  gap:       var(--space-md);
+  height:    100%;
+  min-height: 0;
+}
+
+.dashboard__main {
+  flex:           1;
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--space-md);
+  overflow-y:     auto;
+  min-width:      0;
+  padding-right:  var(--space-xs);
+}
+</style>

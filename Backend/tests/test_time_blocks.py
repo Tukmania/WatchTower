@@ -40,6 +40,11 @@ class TestTimeBlocks(unittest.TestCase):
         """00:00 should return 00:00 - 00:30"""
         dt = datetime(2025, 1, 1, 0, 0)
         self.assertEqual(get_time_block(dt), "00:00 – 00:30")
+        
+    def test_after_midnight_block(self):
+        """01:00 should return 01:00 - 01:30"""
+        dt = datetime(2025, 1, 1, 1, 0)
+        self.assertEqual(get_time_block(dt), "01:00 – 01:30")
 
     def test_late_night_block(self):
         """23:45 should return 23:30 - 00:00"""

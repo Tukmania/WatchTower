@@ -1,15 +1,15 @@
 import api from './index.js'
 
-export const downloadReport = async (date) => {
+export async function downloadReport(date) {
   const response = await api.get('/api/report', {
-    params: { date },
-    responseType: 'blob'
+    params:       { date },
+    responseType: 'blob'   // tells Axios to treat the response as a file
   })
 
-  // Trigger browser file download
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
+  // Build a temporary download link and click it
+  const url      = window.URL.createObjectURL(new Blob([response.data]))
+  const link     = document.createElement('a')
+  link.href      = url
   link.setAttribute('download', `CCTV_Report_${date}.xlsx`)
   document.body.appendChild(link)
   link.click()
