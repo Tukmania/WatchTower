@@ -7,7 +7,7 @@
         <div>
           <h1 class="reports-view__title">Reports</h1>
           <p class="reports-view__sub">
-            Generate and download your shift Excel report
+            Generate and download a shift Excel report for any time interval
           </p>
         </div>
       </div>
@@ -30,25 +30,55 @@
             <div>
               <h2 class="report-card__title">Generate Excel Report</h2>
               <p class="report-card__sub">
-                Downloads a structured .xlsx file with terminal wraps,
-                shop interactions and a full raw event log
+                Choose the start and end of your shift to include all events
+                within that interval in the report
               </p>
             </div>
           </div>
 
           <div class="report-card__body">
 
-            <!-- Date picker -->
+            <!-- Quick-select shift presets -->
+            <div class="presets">
+              <span class="presets__label">Quick select:</span>
+              <button class="preset-btn" @click="applyPreset('day')">Today Day Shift</button>
+              <button class="preset-btn" @click="applyPreset('night')">Tonight Night Shift</button>
+              <button class="preset-btn" @click="applyPreset('lastNight')">Last Night Shift</button>
+            </div>
+
+            <!-- Start datetime -->
             <div class="report-field">
-              <label class="report-field__label">Shift Date</label>
+              <label class="report-field__label">Start</label>
               <input
-                v-model="selectedDate"
-                type="date"
+                v-model="startDt"
+                type="datetime-local"
                 class="report-field__input"
               />
-              <p class="report-field__hint">
-                All events logged on this date will be included
-              </p>
+            </div>
+
+            <!-- End datetime -->
+            <div class="report-field">
+              <label class="report-field__label">End</label>
+              <input
+                v-model="endDt"
+                type="datetime-local"
+                class="report-field__input"
+              />
+            </div>
+
+            <!-- Interval summary -->
+            <div v-if="intervalLabel" class="interval-summary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {{ intervalLabel }}
+            </div>
+
+            <!-- Validation error -->
+            <div v-if="validationError" class="field-error">
+              {{ validationError }}
             </div>
 
             <!-- Generate button -->
@@ -56,16 +86,13 @@
               class="report-btn"
               :class="{ 'report-btn--loading': isGenerating,
                         'report-btn--success': success }"
-              :disabled="isGenerating"
+              :disabled="isGenerating || !!validationError || !startDt || !endDt"
               @click="handleGenerate"
             >
-              <!-- Generating state -->
               <template v-if="isGenerating">
                 <span class="report-btn__spinner" />
                 Generating Report...
               </template>
-
-              <!-- Success state -->
               <template v-else-if="success">
                 <svg width="18" height="18" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2.5">
@@ -73,8 +100,6 @@
                 </svg>
                 Report Downloaded!
               </template>
-
-              <!-- Default state -->
               <template v-else>
                 <svg width="18" height="18" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2.5">
@@ -86,7 +111,7 @@
               </template>
             </button>
 
-            <!-- Error message -->
+            <!-- API error -->
             <Transition name="fade-msg">
               <div v-if="error" class="report-error">
                 <svg width="16" height="16" viewBox="0 0 24 24"
@@ -100,10 +125,9 @@
             </Transition>
 
           </div>
-
         </div>
 
-        <!-- Report contents info card -->
+        <!-- Info card -->
         <div class="info-card card">
 
           <div class="info-card__header">
@@ -113,9 +137,7 @@
           <div class="info-card__body">
 
             <div class="info-sheet">
-              <div class="info-sheet__badge info-sheet__badge--blue">
-                Sheet 1
-              </div>
+              <div class="info-sheet__badge info-sheet__badge--blue">Sheet 1</div>
               <div class="info-sheet__content">
                 <p class="info-sheet__name">Terminal Wraps</p>
                 <p class="info-sheet__desc">
@@ -128,13 +150,11 @@
             <div class="info-divider" />
 
             <div class="info-sheet">
-              <div class="info-sheet__badge info-sheet__badge--amber">
-                Sheet 2
-              </div>
+              <div class="info-sheet__badge info-sheet__badge--amber">Sheet 2</div>
               <div class="info-sheet__content">
                 <p class="info-sheet__name">Shop Activity</p>
                 <p class="info-sheet__desc">
-                  Interactions, walk-ins and receipt timestamps per shop,
+                  Interactions, walk-ins and receipt counts per shop,
                   grouped by 30-minute time blocks with totals row
                 </p>
               </div>
@@ -143,9 +163,7 @@
             <div class="info-divider" />
 
             <div class="info-sheet">
-              <div class="info-sheet__badge info-sheet__badge--green">
-                Sheet 3
-              </div>
+              <div class="info-sheet__badge info-sheet__badge--green">Sheet 3</div>
               <div class="info-sheet__content">
                 <p class="info-sheet__name">Raw Event Log</p>
                 <p class="info-sheet__desc">
@@ -156,7 +174,6 @@
             </div>
 
           </div>
-
         </div>
 
       </div>
@@ -165,18 +182,103 @@
 </template>
 
 <script setup>
-import { ref }              from 'vue'
-import { useSessionStore }  from '../stores/sessionStore.js'
-import { useReportExport }  from '../composables/useReportExport.js'
-import AppShell             from '../components/layout/AppShell.vue'
+import { ref, computed } from 'vue'
+import { useReportExport } from '../composables/useReportExport.js'
+import AppShell            from '../components/layout/AppShell.vue'
 
-const sessionStore = useSessionStore()
 const { isGenerating, error, success, generate } = useReportExport()
 
-const selectedDate = ref(sessionStore.shiftDate)
+// ── Datetime helpers ───────────────────────────────────────────────────────────
+function toLocal(date) {
+  // Returns "YYYY-MM-DDTHH:MM" in local time for datetime-local inputs
+  const y  = date.getFullYear()
+  const mo = String(date.getMonth() + 1).padStart(2, '0')
+  const d  = String(date.getDate()).padStart(2, '0')
+  const h  = String(date.getHours()).padStart(2, '0')
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  return `${y}-${mo}-${d}T${h}:${mi}`
+}
 
+function smartDefaults() {
+  const now  = new Date()
+  const h    = now.getHours()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+  const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1)
+
+  if (h >= 7 && h < 18) {
+    // Dayshift in progress
+    return {
+      start: toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 7, 0)),
+      end:   toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0))
+    }
+  } else if (h >= 18) {
+    // Nightshift in progress (evening)
+    return {
+      start: toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0)),
+      end:   toLocal(new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 7, 0))
+    }
+  } else {
+    // Early morning (0–6): nightshift that started yesterday
+    return {
+      start: toLocal(new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 18, 0)),
+      end:   toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 7, 0))
+    }
+  }
+}
+
+const defaults = smartDefaults()
+const startDt  = ref(defaults.start)
+const endDt    = ref(defaults.end)
+
+// ── Preset appliers ────────────────────────────────────────────────────────────
+function applyPreset(preset) {
+  const now       = new Date()
+  const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+  const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1)
+
+  if (preset === 'day') {
+    startDt.value = toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 7, 0))
+    endDt.value   = toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0))
+  } else if (preset === 'night') {
+    startDt.value = toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0))
+    endDt.value   = toLocal(new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 7, 0))
+  } else if (preset === 'lastNight') {
+    startDt.value = toLocal(new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 18, 0))
+    endDt.value   = toLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 7, 0))
+  }
+}
+
+// ── Validation ─────────────────────────────────────────────────────────────────
+const validationError = computed(() => {
+  if (!startDt.value || !endDt.value) return null
+  if (new Date(endDt.value) <= new Date(startDt.value)) {
+    return 'End time must be after start time.'
+  }
+  return null
+})
+
+// ── Interval label ─────────────────────────────────────────────────────────────
+const intervalLabel = computed(() => {
+  if (!startDt.value || !endDt.value) return ''
+  const s = new Date(startDt.value)
+  const e = new Date(endDt.value)
+  const fmt = (d) => d.toLocaleString('en-GB', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  })
+  const diffMs  = e - s
+  const diffH   = Math.floor(diffMs / 3600000)
+  const diffMin = Math.floor((diffMs % 3600000) / 60000)
+  const durStr  = diffMin ? `${diffH}h ${diffMin}m` : `${diffH}h`
+  return `${fmt(s)} → ${fmt(e)}  (${durStr})`
+})
+
+// ── Generate ───────────────────────────────────────────────────────────────────
 async function handleGenerate() {
-  await generate(selectedDate.value)
+  if (validationError.value) return
+  await generate(startDt.value, endDt.value)
 }
 </script>
 
@@ -187,10 +289,7 @@ async function handleGenerate() {
   gap:            var(--space-lg);
 }
 
-/* ── Header ───────────────────────────────────────────────── */
-.reports-view__header {
-  flex-shrink: 0;
-}
+.reports-view__header { flex-shrink: 0; }
 
 .reports-view__title {
   font-size:   var(--font-size-xl);
@@ -206,16 +305,14 @@ async function handleGenerate() {
 
 /* ── Body layout ──────────────────────────────────────────── */
 .reports-view__body {
-  display: grid;
+  display:               grid;
   grid-template-columns: 1fr 1fr;
-  gap:     var(--space-lg);
-  align-items: start;
+  gap:                   var(--space-lg);
+  align-items:           start;
 }
 
 @media (max-width: 900px) {
-  .reports-view__body {
-    grid-template-columns: 1fr;
-  }
+  .reports-view__body { grid-template-columns: 1fr; }
 }
 
 /* ── Report card ──────────────────────────────────────────── */
@@ -247,9 +344,9 @@ async function handleGenerate() {
 }
 
 .report-card__sub {
-  font-size:  var(--font-size-sm);
-  color:      var(--color-text-muted);
-  margin-top: 4px;
+  font-size:   var(--font-size-sm);
+  color:       var(--color-text-muted);
+  margin-top:  4px;
   line-height: 1.5;
 }
 
@@ -258,6 +355,43 @@ async function handleGenerate() {
   display: flex;
   flex-direction: column;
   gap:     var(--space-md);
+}
+
+/* ── Presets ──────────────────────────────────────────────── */
+.presets {
+  display:     flex;
+  align-items: center;
+  gap:         var(--space-sm);
+  flex-wrap:   wrap;
+}
+
+.presets__label {
+  font-size:   var(--font-size-xs);
+  font-weight: 600;
+  color:       var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.preset-btn {
+  padding:       4px 10px;
+  border:        1px solid var(--color-border);
+  border-radius: 20px;
+  background:    var(--color-bg-section);
+  color:         var(--color-text-secondary);
+  font-size:     var(--font-size-xs);
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    var(--transition);
+  font-family:   var(--font-family);
+  white-space:   nowrap;
+}
+
+.preset-btn:hover {
+  background:   var(--color-primary);
+  border-color: var(--color-primary);
+  color:        white;
 }
 
 /* ── Field ────────────────────────────────────────────────── */
@@ -291,9 +425,25 @@ async function handleGenerate() {
   box-shadow:   0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
-.report-field__hint {
-  font-size: var(--font-size-xs);
-  color:     var(--color-text-muted);
+/* ── Interval summary pill ────────────────────────────────── */
+.interval-summary {
+  display:       flex;
+  align-items:   center;
+  gap:           6px;
+  padding:       8px 12px;
+  background:    rgba(37, 99, 235, 0.06);
+  border:        1px solid rgba(37, 99, 235, 0.15);
+  border-radius: var(--radius-md);
+  font-size:     var(--font-size-sm);
+  font-weight:   500;
+  color:         var(--color-primary);
+}
+
+/* ── Validation error ─────────────────────────────────────── */
+.field-error {
+  font-size:   var(--font-size-sm);
+  color:       var(--color-danger, #dc2626);
+  font-weight: 500;
 }
 
 /* ── Generate button ──────────────────────────────────────── */
@@ -322,24 +472,16 @@ async function handleGenerate() {
   box-shadow: var(--shadow-md);
 }
 
-.report-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
+.report-btn:active:not(:disabled) { transform: translateY(0); }
 
 .report-btn:disabled {
-  cursor: not-allowed;
+  opacity: 0.55;
+  cursor:  not-allowed;
 }
 
-.report-btn--loading {
-  background: var(--color-primary-light);
-  opacity:    0.85;
-}
+.report-btn--loading { background: var(--color-primary-light); opacity: 0.85; }
+.report-btn--success { background: var(--color-success); }
 
-.report-btn--success {
-  background: var(--color-success);
-}
-
-/* ── Spinner ──────────────────────────────────────────────── */
 .report-btn__spinner {
   width:         18px;
   height:        18px;
@@ -350,11 +492,9 @@ async function handleGenerate() {
   flex-shrink:   0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Error ────────────────────────────────────────────────── */
+/* ── API error ────────────────────────────────────────────── */
 .report-error {
   display:       flex;
   align-items:   flex-start;
@@ -376,9 +516,9 @@ async function handleGenerate() {
 }
 
 .info-card__title {
-  font-size:   var(--font-size-sm);
-  font-weight: 700;
-  color:       var(--color-text-secondary);
+  font-size:      var(--font-size-sm);
+  font-weight:    700;
+  color:          var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }

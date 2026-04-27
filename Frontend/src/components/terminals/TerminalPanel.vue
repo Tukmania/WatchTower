@@ -16,9 +16,8 @@ const currentBlock = computed(() => countsStore.currentBlock || '—')
       <div class="panel-header__left">
         <span class="panel-header__icon">✈️</span>
         <div>
-          <h2 class="panel-header__title">Airport Terminals</h2>
-          <p class="panel-header__sub">Click to tally wraps & foot traffic</p>
-        </div>
+          <h2 class="panel-header__title">Terminals</h2>
+                  </div>
       </div>
       <div class="panel-header__block">
         <span class="section-label">Current block</span>

@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardView from '../views/DashboardView.vue'
-import EventLogView from '../views/EventLogView.vue'
-import ReportsView from '../views/ReportsView.vue'
-import SettingsView from '../views/SettingsView.vue'
+import DashboardView  from '../views/DashboardView.vue'
+import EventLogView   from '../views/EventLogView.vue'
+import ReportsView    from '../views/ReportsView.vue'
+import SettingsView   from '../views/SettingsView.vue'
+import TerminalsView  from '../views/TerminalsView.vue'
+import ShopsView      from '../views/ShopsView.vue'
 
 const routes = [
   {
@@ -13,6 +15,16 @@ const routes = [
     path: '/dashboard',
     name: 'Dashboard',
     component: DashboardView
+  },
+  {
+    path: '/terminals',
+    name: 'Terminals',
+    component: TerminalsView
+  },
+  {
+    path: '/shops',
+    name: 'Shops',
+    component: ShopsView
   },
   {
     path: '/events',
@@ -28,7 +40,6 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: SettingsView
-
   }
 ]
 

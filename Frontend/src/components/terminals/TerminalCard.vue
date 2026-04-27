@@ -1,23 +1,22 @@
 <script setup>
-import { ref,computed } from "vue";
-import TallyButton from "../shared/TallyButton.vue";
-import { useCountsStore } from "../../stores/countsStore";
-
+import { ref, computed }    from 'vue'
+import TallyButton          from '../shared/TallyButton.vue'
+import { useCountsStore }   from '../../stores/countsStore'
+import { useStatusStore }   from '../../stores/statusStore.js'
 
 const props = defineProps({
-  terminal: { type: Object, required: true },
-});
+  terminal: { type: Object, required: true }
+})
 
-const countsStore = useCountsStore();
+const countsStore = useCountsStore()
+const statusStore = useStatusStore()
 
-const counts = computed(() => {
-  return countsStore.getTerminalCounts(props.terminal.name);
-});
+const isOnline = computed(() => statusStore.isOnline(props.terminal.name))
+const counts   = computed(() => countsStore.getTerminalCounts(props.terminal.name))
 
-//Flash state per button type
-const bagFlash  = ref(false);
-const boxFlash  = ref(false);
-const footFlash = ref(false);
+const bagFlash  = ref(false)
+const boxFlash  = ref(false)
+const footFlash = ref(false)
 
 function flash(type) {
   if (type === 'bag_wrap')     { bagFlash.value  = true; setTimeout(() => bagFlash.value  = false, 400) }
@@ -25,18 +24,15 @@ function flash(type) {
   if (type === 'foot_traffic') { footFlash.value = true; setTimeout(() => footFlash.value = false, 400) }
 }
 
-function onLogged(event) {
-  flash(event.subtype);
-}
-
-
+function onLogged(event) { flash(event.subtype) }
 </script>
 
 <template>
-  <div class="terminal-card card">
+  <div class="terminal-card card" :class="{ 'terminal-card--offline': !isOnline }">
 
     <div class="terminal-card__header">
       <span class="terminal-card__name">{{ terminal.name }}</span>
+      <span v-if="!isOnline" class="offline-chip">OFFLINE</span>
     </div>
 
     <div class="terminal-card__buttons">
@@ -48,6 +44,7 @@ function onLogged(event) {
         subtype="bag_wrap"
         :location="terminal.name"
         location-category="terminal"
+        :disabled="!isOnline"
         @logged="onLogged"
       />
       <TallyButton
@@ -58,6 +55,7 @@ function onLogged(event) {
         subtype="box_wrap"
         :location="terminal.name"
         location-category="terminal"
+        :disabled="!isOnline"
         @logged="onLogged"
       />
       <TallyButton
@@ -68,29 +66,27 @@ function onLogged(event) {
         subtype="foot_traffic"
         :location="terminal.name"
         location-category="terminal"
+        :disabled="!isOnline"
         @logged="onLogged"
       />
     </div>
 
     <div class="terminal-card__counts">
-      <div class="count-item">
-        <span class="count-item__icon">🎒</span>
-        <span class="count-item__value" :class="{ 'count-pop': bagFlash }">
-          {{ counts.bag_wrap || 0 }}
-        </span>
-      </div>
-      <div class="count-item">
-        <span class="count-item__icon">📦</span>
-        <span class="count-item__value" :class="{ 'count-pop': boxFlash }">
-          {{ counts.box_wrap || 0 }}
-        </span>
-      </div>
-      <div class="count-item">
-        <span class="count-item__icon">🚶</span>
-        <span class="count-item__value" :class="{ 'count-pop': footFlash }">
-          {{ counts.foot_traffic || 0 }}
-        </span>
-      </div>
+      <template v-if="isOnline">
+        <div class="count-item">
+          <span class="count-item__icon">🎒</span>
+          <span class="count-item__value" :class="{ 'count-pop': bagFlash }">{{ counts.bag_wrap || 0 }}</span>
+        </div>
+        <div class="count-item">
+          <span class="count-item__icon">📦</span>
+          <span class="count-item__value" :class="{ 'count-pop': boxFlash }">{{ counts.box_wrap || 0 }}</span>
+        </div>
+        <div class="count-item">
+          <span class="count-item__icon">🚶</span>
+          <span class="count-item__value" :class="{ 'count-pop': footFlash }">{{ counts.foot_traffic || 0 }}</span>
+        </div>
+      </template>
+      <div v-else class="offline-notice">Offline — data paused</div>
     </div>
 
   </div>
@@ -99,39 +95,62 @@ function onLogged(event) {
 
 <style scoped>
 .terminal-card {
-  padding:    var(--space-md);
-  display:    flex;
+  padding:        var(--space-md);
+  display:        flex;
   flex-direction: column;
-  gap:        var(--space-sm);
-  min-width:  0;
+  gap:            var(--space-sm);
+  min-width:      0;
+  transition:     opacity 0.2s ease, background 0.2s ease;
+}
+
+.terminal-card--offline {
+  opacity:    0.72;
+  background: var(--color-bg-section) !important;
 }
 
 .terminal-card__header {
-  padding-bottom: var(--space-sm);
-  border-bottom:  1px solid var(--color-border-light);
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding-bottom:  var(--space-sm);
+  border-bottom:   1px solid var(--color-border-light);
 }
 
 .terminal-card__name {
-  font-size:   var(--font-size-sm);
-  font-weight: 700;
-  color:       var(--color-primary);
+  font-size:      var(--font-size-sm);
+  font-weight:    700;
+  color:          var(--color-primary);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
+.offline-chip {
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  background:     rgba(220, 38, 38, 0.1);
+  color:          var(--color-danger, #dc2626);
+  border:         1px solid rgba(220, 38, 38, 0.25);
+  padding:        2px 7px;
+  border-radius:  10px;
+}
+
 .terminal-card__buttons {
-  display: flex;
+  display:        flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap:            var(--space-xs);
 }
 
 /* ── Count bar ────────────────────────────────────────────── */
 .terminal-card__counts {
-  display:          flex;
-  justify-content:  space-around;
-  padding-top:      var(--space-sm);
-  border-top:       1px solid var(--color-border-light);
-  margin-top:       var(--space-xs);
+  display:         flex;
+  justify-content: space-around;
+  align-items:     center;
+  padding-top:     var(--space-sm);
+  border-top:      1px solid var(--color-border-light);
+  margin-top:      var(--space-xs);
+  min-height:      44px;
 }
 
 .count-item {
@@ -141,9 +160,7 @@ function onLogged(event) {
   gap:            2px;
 }
 
-.count-item__icon {
-  font-size: 13px;
-}
+.count-item__icon  { font-size: 13px; }
 
 .count-item__value {
   font-size:   var(--font-size-md);
@@ -156,5 +173,13 @@ function onLogged(event) {
 
 .count-pop {
   animation: count-pop 0.4s ease;
+}
+
+.offline-notice {
+  font-size:   11px;
+  font-weight: 600;
+  color:       var(--color-danger, #dc2626);
+  text-align:  center;
+  letter-spacing: 0.3px;
 }
 </style>

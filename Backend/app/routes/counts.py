@@ -5,7 +5,8 @@ from app.services.count_service import (
     get_shop_counts,
     get_summary,
     get_block_summary,
-    get_trend
+    get_trend,
+    get_hourly_summary
 )
 from app.utils.time_helpers import get_time_block
 
@@ -25,6 +26,12 @@ def get_counts_route():
         'block_summary': get_block_summary(shift_date, current_block),
         'current_block': current_block
     })
+
+
+@counts_bp.route('/api/counts/hourly', methods=['GET'])
+def get_hourly_counts_route():
+    shift_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    return jsonify(get_hourly_summary(shift_date))
 
 
 @counts_bp.route('/api/events/trend', methods=['GET'])

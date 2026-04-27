@@ -2,7 +2,7 @@
   <button
     class="tally-btn"
     :class="{ 'tally-btn--loading': isLoading, 'tally-btn--pressed': pressed }"
-    :disabled="isLoading"
+    :disabled="isLoading || disabled"
     @click="handleClick"
   >
     <!-- Rainbow glow layer — always animating -->
@@ -32,7 +32,8 @@ const props = defineProps({
   eventType:        { type: String,  required: true },
   subtype:          { type: String,  default: '' },
   location:         { type: String,  required: true },
-  locationCategory: { type: String,  required: true }
+  locationCategory: { type: String,  required: true },
+  disabled:         { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['logged'])

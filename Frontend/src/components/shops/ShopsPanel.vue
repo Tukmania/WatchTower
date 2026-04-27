@@ -15,10 +15,8 @@ const currentBlock = computed(() => countsStore.currentBlock || "—");
       <div class="panel-header__left">
         <span class="panel-header__icon">🏪</span>
         <div>
-          <h2 class="panel-header__title">Retail Shops</h2>
-          <p class="panel-header__sub">
-            Track interactions, walk-ins & receipts
-          </p>
+          <h2 class="panel-header__title">Shops</h2>
+         
         </div>
       </div>
       <div class="panel-header__block">

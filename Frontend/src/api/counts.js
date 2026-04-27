@@ -7,3 +7,7 @@ export const fetchCounts = (date) => {
 export const fetchTrend = (date) => {
   return api.get('/api/events/trend', { params: { date } })
 }
+
+export const fetchHourlyCounts = (date) => {
+  return api.get('/api/counts/hourly', { params: { date } })
+}

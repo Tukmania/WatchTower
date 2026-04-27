@@ -18,7 +18,8 @@ SHOPS = [
     'LAOMAI MOMBASA',
     'CRAYSON PHARMACY JKIA',
     'CRAYSON PHARMACY KIAMBU ROAD',
-    'CRAYSON PHARMACY MOMBASA'
+    'CRAYSON PHARMACY MOMBASA',
+    'SKYLINE GYM'
 ]
 
 
@@ -97,6 +98,67 @@ def get_block_summary(shift_date, time_block):
         'walkins':      result.walkins or 0,
         'receipts':     result.receipts or 0
     }
+
+
+def _block_to_hour_key(time_block: str) -> str:
+    """Convert a 30-min block string like "07:30 – 08:00" to its hour bucket "07:00 – 08:00"."""
+    h = int(time_block[:2])
+    end_h = (h + 1) % 24
+    return f"{h:02d}:00 – {end_h:02d}:00"
+
+
+def get_hourly_summary(shift_date: str) -> dict:
+    """
+    Returns per-hour data keyed by hour string, e.g. "07:00 – 08:00".
+    Structure: { "<hour_key>": { "terminals": { "<name>": { bag_wrap, box_wrap } },
+                                 "shops":     { "<name>": { interaction, walkin, receipt } } } }
+    """
+    from collections import defaultdict
+
+    hourly: dict = {}
+
+    def _ensure_hour(key):
+        if key not in hourly:
+            hourly[key] = {
+                'terminals': {t: {'bag_wrap': 0, 'box_wrap': 0} for t in TERMINALS},
+                'shops':     {s: {'interaction': 0, 'walkin': 0, 'receipt': 0} for s in SHOPS}
+            }
+
+    terminal_rows = db.session.query(
+        Event.location,
+        Event.time_block,
+        Event.subtype,
+        func.count(Event.id).label('cnt')
+    ).filter(
+        Event.shift_date == shift_date,
+        Event.location_category == 'terminal',
+        Event.subtype.in_(['bag_wrap', 'box_wrap'])
+    ).group_by(Event.location, Event.time_block, Event.subtype).all()
+
+    for row in terminal_rows:
+        hk = _block_to_hour_key(row.time_block)
+        _ensure_hour(hk)
+        if row.location in hourly[hk]['terminals'] and row.subtype in ('bag_wrap', 'box_wrap'):
+            hourly[hk]['terminals'][row.location][row.subtype] += row.cnt
+
+    shop_rows = db.session.query(
+        Event.location,
+        Event.time_block,
+        Event.event_type,
+        func.count(Event.id).label('cnt')
+    ).filter(
+        Event.shift_date == shift_date,
+        Event.location_category == 'shop',
+        Event.event_type.in_(['interaction', 'walkin', 'receipt'])
+    ).group_by(Event.location, Event.time_block, Event.event_type).all()
+
+    for row in shop_rows:
+        hk = _block_to_hour_key(row.time_block)
+        _ensure_hour(hk)
+        if row.location in hourly[hk]['shops'] and row.event_type in ('interaction', 'walkin', 'receipt'):
+            hourly[hk]['shops'][row.location][row.event_type] += row.cnt
+
+    return hourly
 
 
 def get_trend(shift_date):
