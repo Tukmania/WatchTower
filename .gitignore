@@ -139,4 +139,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Temporary folders
-Backend/reports/output
+Backend/reports/output/
+
+.claude/

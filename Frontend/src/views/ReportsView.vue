@@ -421,7 +421,7 @@ async function handleGenerate() {
 
 .report-field__input:focus {
   border-color: var(--color-primary-light);
-  background:   white;
+  background:   var(--color-bg-card);
   box-shadow:   0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 

@@ -55,6 +55,57 @@
 
       </div>
 
+      <!-- Appearance card -->
+      <div class="settings-card card">
+
+        <div class="settings-card__header">
+          <h2 class="settings-card__title">Appearance</h2>
+        </div>
+
+        <div class="settings-card__body">
+          <div class="field">
+            <label class="field__label">Theme</label>
+            <div class="theme-selector">
+
+              <button
+                class="theme-btn"
+                :class="{ 'theme-btn--active': !themeStore.isDark }"
+                @click="themeStore.setTheme(false)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1"  x2="12" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22"   x2="5.64"  y2="5.64"/>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1"  y1="12" x2="3"  y2="12"/>
+                  <line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+                  <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+                </svg>
+                Light
+              </button>
+
+              <button
+                class="theme-btn"
+                :class="{ 'theme-btn--active': themeStore.isDark }"
+                @click="themeStore.setTheme(true)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+                Dark
+              </button>
+
+            </div>
+            <p class="field__hint">Changes the appearance of the entire app</p>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </AppShell>
 </template>
@@ -62,15 +113,16 @@
 <script setup>
 import { ref, watch }       from 'vue'
 import { useSessionStore }  from '../stores/sessionStore.js'
+import { useThemeStore }    from '../stores/themeStore.js'
 import AppShell             from '../components/layout/AppShell.vue'
 
 const sessionStore = useSessionStore()
+const themeStore   = useThemeStore()
 const operatorName = ref(sessionStore.operatorName)
 const shiftDate    = ref(sessionStore.shiftDate)
 const saved        = ref(false)
 let   saveTimer    = null
 
-// Show "saved" confirmation whenever anything changes
 watch([operatorName, shiftDate], () => {
   if (saveTimer) clearTimeout(saveTimer)
   saved.value = true
@@ -161,8 +213,44 @@ watch([operatorName, shiftDate], () => {
 
 .field__input:focus {
   border-color: var(--color-primary-light);
-  background:   white;
+  background:   var(--color-bg-card);
   box-shadow:   0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+/* ── Theme selector ───────────────────────────────────────── */
+.theme-selector {
+  display: flex;
+  gap:     var(--space-sm);
+}
+
+.theme-btn {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             var(--space-sm);
+  flex:            1;
+  padding:         10px var(--space-md);
+  border:          2px solid var(--color-border);
+  border-radius:   var(--radius-md);
+  background:      var(--color-bg-section);
+  color:           var(--color-text-secondary);
+  font-size:       var(--font-size-base);
+  font-family:     var(--font-family);
+  font-weight:     600;
+  cursor:          pointer;
+  transition:      var(--transition);
+}
+
+.theme-btn:hover {
+  background:   var(--color-bg-hover);
+  border-color: var(--color-primary-light);
+  color:        var(--color-text-primary);
+}
+
+.theme-btn--active {
+  border-color: var(--color-primary-light);
+  background:   rgba(37, 99, 235, 0.08);
+  color:        var(--color-primary-light);
 }
 
 .field__hint {

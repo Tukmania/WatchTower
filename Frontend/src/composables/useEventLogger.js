@@ -28,6 +28,7 @@ export function useEventLogger() {
 
       eventStore.prependEvent(savedEvent)
       await countsStore.refreshCounts()
+      await countsStore.refreshHourly()
 
       return { success: true, event: savedEvent }
 
@@ -54,6 +55,7 @@ export function useEventLogger() {
       if (result.success) {
         eventStore.removeLastEvent()
         await countsStore.refreshCounts()
+        await countsStore.refreshHourly()
         lastLogged.value = null
 
         // Trigger the global UndoToast

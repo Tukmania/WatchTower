@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
-import { fetchCounts } from '../api/counts.js'
+import { fetchCounts, fetchHourlyCounts } from '../api/counts.js'
+
+function localDateString() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
 
 export const useCountsStore = defineStore('counts', {
   state: () => ({
@@ -8,6 +13,7 @@ export const useCountsStore = defineStore('counts', {
     summary:        {},
     blockSummary:   {},
     currentBlock:   '',
+    hourlyData:     {},
     isLoading:      false,
     pollingTimer:   null
   }),
@@ -16,7 +22,7 @@ export const useCountsStore = defineStore('counts', {
     // Called after every button click and on undo
     async refreshCounts() {
       try {
-        const today    = new Date().toISOString().split('T')[0]
+        const today    = localDateString()
         const response = await fetchCounts(today)
         const data     = response.data
 
@@ -31,11 +37,23 @@ export const useCountsStore = defineStore('counts', {
       }
     },
 
+    async refreshHourly() {
+      try {
+        const today = localDateString()
+        const res   = await fetchHourlyCounts(today)
+        this.hourlyData = res.data
+      } catch (err) {
+        console.error('Failed to refresh hourly counts:', err)
+      }
+    },
+
     // Start auto polling every 10 seconds as a safety net
     startPolling() {
       this.refreshCounts()
+      this.refreshHourly()
       this.pollingTimer = setInterval(() => {
         this.refreshCounts()
+        this.refreshHourly()
       }, 10000)
     },
 

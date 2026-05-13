@@ -79,12 +79,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter }         from 'vue-router'
-import { useCountsStore }    from '../../stores/countsStore.js'
-import { useStatusStore }    from '../../stores/statusStore.js'
-import { fetchHourlyCounts } from '../../api/counts.js'
-import QuickActionsBar       from './QuickActionsBar.vue'
+import { computed } from 'vue'
+import { useRouter }      from 'vue-router'
+import { useCountsStore } from '../../stores/countsStore.js'
+import { useStatusStore } from '../../stores/statusStore.js'
+import QuickActionsBar    from './QuickActionsBar.vue'
 
 // ── Location lists ─────────────────────────────────────────────────────────────
 const TERMINAL_LIST = [
@@ -108,8 +107,7 @@ const SHOP_LIST = [
 const countsStore  = useCountsStore()
 const statusStore  = useStatusStore()
 const currentBlock = computed(() => countsStore.currentBlock || '—')
-const hourlyData   = ref({})
-let   pollTimer    = null
+const hourlyData   = computed(() => countsStore.hourlyData)
 
 // ── Dot-leader line builder ────────────────────────────────────────────────────
 function dotLine(label, value, width = 32) {
@@ -172,26 +170,6 @@ function shopVal(slot, shopName, metric) {
   if (!d) return 0
   return d[metric] || 0
 }
-
-// ── Data fetching ──────────────────────────────────────────────────────────────
-async function fetchHourly() {
-  try {
-    const date = new Date().toISOString().split('T')[0]
-    const res  = await fetchHourlyCounts(date)
-    hourlyData.value = res.data
-  } catch (err) {
-    console.error('Failed to fetch hourly counts:', err)
-  }
-}
-
-onMounted(() => {
-  fetchHourly()
-  pollTimer = setInterval(fetchHourly, 10000)
-})
-
-onUnmounted(() => {
-  clearInterval(pollTimer)
-})
 
 // ── Report button → navigate to Reports view for interval selection ────────────
 const router = useRouter()

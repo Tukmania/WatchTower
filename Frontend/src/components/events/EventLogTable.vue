@@ -235,7 +235,7 @@ const filteredEvents = computed(() => {
 .filter-group__input:focus,
 .filter-group__select:focus {
   border-color: var(--color-primary-light);
-  background:   white;
+  background:   var(--color-bg-card);
 }
 
 .filter-clear {
