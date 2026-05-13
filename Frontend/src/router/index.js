@@ -5,6 +5,7 @@ import ReportsView    from '../views/ReportsView.vue'
 import SettingsView   from '../views/SettingsView.vue'
 import TerminalsView  from '../views/TerminalsView.vue'
 import ShopsView      from '../views/ShopsView.vue'
+import IncidentView   from '../views/IncidentView.vue'
 
 const routes = [
   {
@@ -30,6 +31,11 @@ const routes = [
     path: '/events',
     name: 'EventLog',
     component: EventLogView
+  },
+  {
+    path: '/incidents',
+    name: 'Incidents',
+    component: IncidentView
   },
   {
     path: '/reports',

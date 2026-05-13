@@ -173,6 +173,20 @@
               </div>
             </div>
 
+            <div class="info-divider" />
+
+            <div class="info-sheet">
+              <div class="info-sheet__badge info-sheet__badge--purple">Incidents</div>
+              <div class="info-sheet__content">
+                <p class="info-sheet__name">CCTV Incident Report</p>
+                <p class="info-sheet__desc">
+                  All incidents logged during the shift — shift, date, time,
+                  terminal and full incident description — appended below the
+                  nightshift table
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -545,9 +559,10 @@ async function handleGenerate() {
   flex-shrink:   0;
 }
 
-.info-sheet__badge--blue  { background: rgba(37,99,235,0.1);  color: #1d4ed8; }
-.info-sheet__badge--amber { background: rgba(217,119,6,0.1);  color: #92400e; }
-.info-sheet__badge--green { background: rgba(5,150,105,0.1);  color: #047857; }
+.info-sheet__badge--blue   { background: rgba(37,99,235,0.1);   color: #1d4ed8; }
+.info-sheet__badge--amber  { background: rgba(217,119,6,0.1);   color: #92400e; }
+.info-sheet__badge--green  { background: rgba(5,150,105,0.1);   color: #047857; }
+.info-sheet__badge--purple { background: rgba(124,58,237,0.1);  color: #6d28d9; }
 
 .info-sheet__name {
   font-size:   var(--font-size-sm);

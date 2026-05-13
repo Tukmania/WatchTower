@@ -69,6 +69,10 @@ const icons = {
     <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
     <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
   </svg>`,
+  incidents: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>`,
   reports: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
     <line x1="6"  y1="20" x2="6"  y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
@@ -84,6 +88,7 @@ const navItems = [
   { route: '/terminals', label: 'Terminals',  icon: icons.terminals },
   { route: '/shops',     label: 'Shops',      icon: icons.shops },
   { route: '/events',    label: 'Event Log',  icon: icons.eventlog },
+  { route: '/incidents', label: 'Incidents',  icon: icons.incidents },
   { route: '/reports',   label: 'Reports',    icon: icons.reports }
 ]
 </script>

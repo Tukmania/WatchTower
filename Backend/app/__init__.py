@@ -28,7 +28,7 @@ def create_app():
     def add_cors(response):
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,DELETE,OPTIONS'
         return response
 
     @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
@@ -37,16 +37,19 @@ def create_app():
         return make_response('', 204)
 
     # Register blueprints
-    from app.routes.events  import events_bp
-    from app.routes.counts  import counts_bp
-    from app.routes.reports import reports_bp
+    from app.routes.events    import events_bp
+    from app.routes.counts    import counts_bp
+    from app.routes.reports   import reports_bp
+    from app.routes.incidents import incidents_bp
 
     app.register_blueprint(events_bp)
     app.register_blueprint(counts_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(incidents_bp)
 
     # Import models so SQLAlchemy sees them
-    from app.models.event import Event
+    from app.models.event    import Event
+    from app.models.incident import Incident
 
     # Create database tables
     with app.app_context():

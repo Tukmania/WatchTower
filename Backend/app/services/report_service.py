@@ -127,7 +127,8 @@ def write_blank_separator(ws, row, col, bg='E2E8F0'):
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
-def generate_excel_report(events: list, label: str, filename_base: str) -> str:
+def generate_excel_report(events: list, label: str, filename_base: str,
+                          incidents: list = None) -> str:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "CCTV Report"
@@ -158,16 +159,6 @@ def generate_excel_report(events: list, label: str, filename_base: str) -> str:
             elif etype == 'receipt':
                 data[block][location]['receipt'] += 1
 
-    # ── Determine which time blocks are actually present in the data ───────────
-    # Only write blocks that fall within the requested interval
-    present_blocks = set(data.keys())
-
-    def _filter_blocks(block_list):
-        # Keep all defined blocks; zeros will show for empty ones.
-        # The caller already filtered events by timestamp, so only relevant
-        # time blocks will have non-zero data.
-        return block_list
-
     # ── Write dayshift section ─────────────────────────────────────────────────
     current_row = 1
     current_row = _write_shift_section(
@@ -181,12 +172,18 @@ def generate_excel_report(events: list, label: str, filename_base: str) -> str:
     current_row += 2
 
     # ── Write nightshift section ───────────────────────────────────────────────
-    _write_shift_section(
+    current_row = _write_shift_section(
         ws, data, label,
         shift_label='NIGHTSHIFT',
         blocks=NIGHTSHIFT_BLOCKS,
         start_row=current_row
     )
+
+    # Three blank rows before incident section
+    current_row += 3
+
+    # ── Write incident report section (always present) ────────────────────────
+    _write_incident_section(ws, incidents or [], current_row)
 
     # ── Freeze the top rows of first section so headers stay visible ───────────
     ws.freeze_panes = 'B6'
@@ -437,5 +434,111 @@ def _write_shift_section(ws, data, label, shift_label, blocks, start_row):
     for sc in SHOP_START_COLS:
         for offset in range(3):
             ws.column_dimensions[get_column_letter(sc + offset)].width = 11
+
+    return r
+
+
+# ── Incident section writer ────────────────────────────────────────────────────
+def _write_incident_section(ws, incidents: list, start_row: int) -> int:
+    """
+    Writes the CCTV Incident Report table below the shift tables.
+    Always rendered (with blank placeholder rows when no incidents exist).
+
+    Column layout (reuses the 36-col sheet width):
+      Col 1        → SHIFT
+      Cols  2– 4   → DATE       (3 cols merged)
+      Cols  5– 9   → TIME       (5 cols merged)
+      Cols 10–16   → TERMINAL   (7 cols merged)
+      Cols 17–36   → TYPE OF INCIDENT (20 cols merged, wrap text)
+    """
+
+    C_TITLE   = '4C1D95'   # deep violet title bar
+    C_HEADER  = '1E293B'   # dark slate sub-header
+    C_EVEN    = 'F5F3FF'   # very light lavender alternating row
+    C_WHITE   = 'FFFFFF'
+    C_EMPTY   = 'FAFAFA'   # blank placeholder rows
+    LAST_COL  = 36
+
+    # Minimum blank rows shown when incidents list is short
+    MIN_BLANK_ROWS = 6
+
+    r = start_row
+
+    # ── Title row ────────────────────────────────────────────────────────────
+    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=LAST_COL)
+    write_cell(ws, r, 1, 'CCTV INCIDENT REPORT',
+               bold=True, bg=C_TITLE, font_color=C_WHITE,
+               font_size=12, align='center')
+    ws.row_dimensions[r].height = 22
+    r += 1
+
+    # ── Column header row ────────────────────────────────────────────────────
+    write_cell(ws, r, 1, 'SHIFT',
+               bold=True, bg=C_HEADER, font_color=C_WHITE, font_size=9)
+
+    ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+    write_cell(ws, r, 2, 'DATE',
+               bold=True, bg=C_HEADER, font_color=C_WHITE, font_size=9)
+
+    ws.merge_cells(start_row=r, start_column=5, end_row=r, end_column=9)
+    write_cell(ws, r, 5, 'TIME',
+               bold=True, bg=C_HEADER, font_color=C_WHITE, font_size=9)
+
+    ws.merge_cells(start_row=r, start_column=10, end_row=r, end_column=16)
+    write_cell(ws, r, 10, 'TERMINAL / LOCATION',
+               bold=True, bg=C_HEADER, font_color=C_WHITE, font_size=9)
+
+    ws.merge_cells(start_row=r, start_column=17, end_row=r, end_column=LAST_COL)
+    write_cell(ws, r, 17, 'TYPE OF INCIDENT',
+               bold=True, bg=C_HEADER, font_color=C_WHITE, font_size=9)
+
+    ws.row_dimensions[r].height = 18
+    r += 1
+
+    # ── Data rows ────────────────────────────────────────────────────────────
+    for idx, inc in enumerate(incidents):
+        bg = C_EVEN if idx % 2 == 0 else C_WHITE
+
+        write_cell(ws, r, 1, inc.get('shift', ''),
+                   bg=bg, font_size=9, align='center', bold=True)
+
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+        write_cell(ws, r, 2, inc.get('date', ''),
+                   bg=bg, font_size=9, align='center')
+
+        ws.merge_cells(start_row=r, start_column=5, end_row=r, end_column=9)
+        write_cell(ws, r, 5, inc.get('time', ''),
+                   bg=bg, font_size=9, align='center')
+
+        ws.merge_cells(start_row=r, start_column=10, end_row=r, end_column=16)
+        write_cell(ws, r, 10, inc.get('terminal', ''),
+                   bg=bg, font_size=9, align='center')
+
+        ws.merge_cells(start_row=r, start_column=17, end_row=r, end_column=LAST_COL)
+        write_cell(ws, r, 17, inc.get('description', ''),
+                   bg=bg, font_size=9, align='left', wrap=True)
+
+        ws.row_dimensions[r].height = 52
+        r += 1
+
+    # ── Blank placeholder rows ───────────────────────────────────────────────
+    blank_count = max(MIN_BLANK_ROWS, MIN_BLANK_ROWS - len(incidents))
+    for _ in range(blank_count):
+        write_cell(ws, r, 1, '', bg=C_EMPTY, font_size=9)
+
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+        write_cell(ws, r, 2, '', bg=C_EMPTY, font_size=9)
+
+        ws.merge_cells(start_row=r, start_column=5, end_row=r, end_column=9)
+        write_cell(ws, r, 5, '', bg=C_EMPTY, font_size=9)
+
+        ws.merge_cells(start_row=r, start_column=10, end_row=r, end_column=16)
+        write_cell(ws, r, 10, '', bg=C_EMPTY, font_size=9)
+
+        ws.merge_cells(start_row=r, start_column=17, end_row=r, end_column=LAST_COL)
+        write_cell(ws, r, 17, '', bg=C_EMPTY, font_size=9)
+
+        ws.row_dimensions[r].height = 30
+        r += 1
 
     return r

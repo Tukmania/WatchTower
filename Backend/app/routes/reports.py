@@ -1,6 +1,7 @@
 from flask import Blueprint, request, send_file, jsonify
 from datetime import datetime, timedelta
-from app.models.event import Event
+from app.models.event    import Event
+from app.models.incident import Incident
 from app.services.report_service import generate_excel_report
 
 reports_bp = Blueprint('reports', __name__)
@@ -36,6 +37,14 @@ def download_report():
 
     events_list = [e.to_dict() for e in events]
 
+    # Incidents logged (by created_at) within the same window
+    incidents = Incident.query.filter(
+        Incident.created_at >= start_dt.isoformat(),
+        Incident.created_at <  end_dt_exclusive.isoformat()
+    ).order_by(Incident.id.asc()).all()
+
+    incidents_list = [i.to_dict() for i in incidents]
+
     # Human-readable label for the Excel header
     label = (
         f"{start_dt.strftime('%d/%m/%Y %H:%M')} – "
@@ -48,7 +57,7 @@ def download_report():
         f"_to_{end_dt.strftime('%Y%m%d_%H%M')}"
     )
 
-    filepath = generate_excel_report(events_list, label, filename_base)
+    filepath = generate_excel_report(events_list, label, filename_base, incidents_list)
 
     return send_file(
         filepath,
